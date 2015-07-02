@@ -1,0 +1,8 @@
+[package]
+name = "concat_bytes"
+version = "0.1.0"
+authors = ["KokaKiwi <kokakiwi@kokakiwi.net>"]
+
+[lib]
+name = "concat_bytes"
+plugin = true
