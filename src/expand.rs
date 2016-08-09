@@ -2,13 +2,14 @@
 use std::io::Write;
 use std::rc::Rc;
 use syntax::ast;
+use syntax::tokenstream;
 use syntax::codemap;
 use syntax::ext::base;
 use syntax::ext::build::AstBuilder;
 
 pub fn expand_syntax_ext(cx: &mut base::ExtCtxt,
                          sp: codemap::Span,
-                         tts: &[ast::TokenTree])
+                         tts: &[tokenstream::TokenTree])
                          -> Box<base::MacResult+'static> {
     let es = match base::get_exprs_from_tts(cx, sp, tts) {
         Some(e) => e,
@@ -17,33 +18,29 @@ pub fn expand_syntax_ext(cx: &mut base::ExtCtxt,
     let mut accumulator = Vec::new();
     for e in es {
         match e.node {
-            ast::ExprLit(ref lit) => {
+            ast::ExprKind::Lit(ref lit) => {
                 match lit.node {
-                    ast::LitStr(ref s, _) |
-                    ast::LitFloat(ref s, _) |
-                    ast::LitFloatUnsuffixed(ref s) => {
+                    ast::LitKind::Str(ref s, _) |
+                    ast::LitKind::Float(ref s, _) |
+                    ast::LitKind::FloatUnsuffixed(ref s) => {
                         write!(accumulator, "{}", s).unwrap();
                     }
-                    ast::LitChar(c) => {
+                    ast::LitKind::Char(c) => {
                         write!(accumulator, "{}", c).unwrap();
                     }
-                    ast::LitInt(i, ast::UnsignedIntLit(_)) |
-                    ast::LitInt(i, ast::SignedIntLit(_, ast::Plus)) |
-                    ast::LitInt(i, ast::UnsuffixedIntLit(ast::Plus)) => {
+                    ast::LitKind::Int(i, ast::LitIntType::Unsigned(_)) |
+                    ast::LitKind::Int(i, ast::LitIntType::Signed(_)) |
+                    ast::LitKind::Int(i, ast::LitIntType::Unsuffixed) => {
                         write!(accumulator, "{}", i).unwrap();
                     }
-                    ast::LitInt(i, ast::SignedIntLit(_, ast::Minus)) |
-                    ast::LitInt(i, ast::UnsuffixedIntLit(ast::Minus)) => {
-                        write!(accumulator, "-{}", i).unwrap();
-                    }
-                    ast::LitBool(b) => {
+                    ast::LitKind::Bool(b) => {
                         write!(accumulator, "{}", b).unwrap();
                     }
-                    ast::LitByte(b) => {
+                    ast::LitKind::Byte(b) => {
                         accumulator.push(b);
                     }
-                    ast::LitBinary(ref bytes) => {
-                        accumulator.extend(bytes.iter());
+                    ast::LitKind::ByteStr(ref bytes) => {
+                        accumulator.extend_from_slice(bytes);
                     }
                 }
             }
@@ -54,6 +51,6 @@ pub fn expand_syntax_ext(cx: &mut base::ExtCtxt,
     }
     base::MacEager::expr(cx.expr_lit(
         sp,
-        ast::LitBinary(Rc::new(accumulator))
+        ast::LitKind::ByteStr(Rc::new(accumulator))
     ))
 }
